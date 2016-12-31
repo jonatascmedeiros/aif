@@ -289,7 +289,7 @@ mirror_by_country() {
  curl -so ${MIRROR_TEMP} ${URL} 2>/tmp/.errlog
  check_for_error
  sed -i 's/^#Server/Server/g' ${MIRROR_TEMP}
- nano ${MIRROR_TEMP}
+ vim ${MIRROR_TEMP}
 
  dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --title " $_MirrorlistTitle " --yesno "$_MirrorGenQ" 0 0
 
@@ -324,7 +324,7 @@ dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --title " $_MirrorlistTitle " \
              dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --title " $_MirrorlistTitle " --infobox "\n$_Done!\n\n" 0 0
 			 sleep 2
              ;;
-        "3") nano /etc/pacman.d/mirrorlist
+        "3") vim /etc/pacman.d/mirrorlist
              ;;
         "4") if [[ -e /etc/pacman.d/mirrorlist.orig ]]; then       
 				 mv -f /etc/pacman.d/mirrorlist.orig /etc/pacman.d/mirrorlist
@@ -333,7 +333,7 @@ dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --title " $_MirrorlistTitle " \
 		         dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --title " $_ErrTitle " --msgbox "$_MirrorNoneBody" 0 0
 		      fi
              ;;
-         "5") nano /etc/pacman.conf
+         "5") vim /etc/pacman.conf
 			  dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --title " $_MirrorPacman " --yesno "$_MIrrorPacQ" 0 0 && COPY_PACCONF=1 || COPY_PACCONF=0
 			  pacman -Syy
 			;;
@@ -759,7 +759,7 @@ select_filesystem(){
 	"btrfs" "mkfs.btrfs -f" \
 	"ext2" "mkfs.ext2 -q" \
 	"ext3" "mkfs.ext3 -q" \
-	"ext4" "mkfs.ext4 -q" \
+	"ext4" "mkfs.ext4 -q -L arch -m 0 -T big" \
 	"f2fs" "mkfs.f2fs" \
 	"jfs" "mkfs.jfs -q" \
 	"nilfs2" "mkfs.nilfs2 -q" \
@@ -777,7 +777,7 @@ select_filesystem(){
 					;;
 		"ext2") 	FILESYSTEM="mkfs.ext2 -q" ;;
 		"ext3") 	FILESYSTEM="mkfs.ext3 -q" ;;
-		"ext4") 	FILESYSTEM="mkfs.ext4 -q"
+		"ext4") 	FILESYSTEM="mkfs.ext4 -q -L arch -m 0 -T big"
 					CHK_NUM=8
 					fs_opts="data=journal data=writeback dealloc discard noacl noatime nobarrier nodelalloc"
 					;;
@@ -1576,7 +1576,7 @@ install_base() {
 		# If at least one kernel selected, proceed with installation.
 		elif [[ $KERNEL == "y" ]]; then
 			clear
-			[[ $(cat ${ANSWER}) -eq 1 ]] && pacstrap ${MOUNTPOINT} $(pacman -Sqg base | sed 's/linux//' | sed 's/util-/util-linux/') $(cat ${PACKAGES}) btrfs-progs f2fs-tools sudo 2>/tmp/.errlog
+			[[ $(cat ${ANSWER}) -eq 1 ]] && pacstrap ${MOUNTPOINT} $(pacman -Sqg base | sed 's/linux//' | sed 's/util-/util-linux/') $(cat ${PACKAGES}) 2>/tmp/.errlog
 			[[ $(cat ${ANSWER}) -eq 2 ]] && pacstrap ${MOUNTPOINT} $(cat ${PACKAGES}) 2>/tmp/.errlog
 			check_for_error
 		
@@ -1676,7 +1676,7 @@ uefi_bootloader() {
 	if [[ $(cat ${PACKAGES}) != "" ]]; then
 		
 		clear
-		pacstrap ${MOUNTPOINT} $(cat ${PACKAGES} | grep -v "systemd-boot") efibootmgr dosfstools 2>/tmp/.errlog
+		pacstrap ${MOUNTPOINT} $(cat ${PACKAGES} | grep -v "systemd-boot") 2>/tmp/.errlog
 		check_for_error
 
 		case $(cat ${PACKAGES}) in
@@ -1711,7 +1711,7 @@ uefi_bootloader() {
 				|| bl_root=$"PARTUUID="$(blkid -s PARTUUID ${ROOT_PART} | sed 's/.*=//g' | sed 's/"//g')
  					
 				# Create default config files. First the loader
-				echo -e "default  arch\ntimeout  10" > ${MOUNTPOINT}${UEFI_MOUNT}/loader/loader.conf 2>/tmp/.errlog
+				echo -e "default\tarch\ntimeout\t5" > ${MOUNTPOINT}${UEFI_MOUNT}/loader/loader.conf 2>/tmp/.errlog
 				
 				# Second, the kernel conf files
 				[[ -e ${MOUNTPOINT}/boot/initramfs-linux.img ]] && echo -e "title\tArch Linux\nlinux\t/vmlinuz-linux\ninitrd\t/initramfs-linux.img\noptions\troot=${bl_root} rw" > ${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/arch.conf
@@ -1905,8 +1905,8 @@ install_intel(){
 	# Systemd-boot
 	if [[ -e ${MOUNTPOINT}${UEFI_MOUNT}/loader/loader.conf ]]; then
 			update=$(ls ${MOUNTPOINT}${UEFI_MOUNT}/loader/entries/*.conf)
-			for i in ${upgate}; do
-				sed -i '/linux \//a initrd \/intel-ucode.img' ${i}
+			for i in ${update}; do
+				sed -i '/linux\t\//a initrd\t\/intel-ucode.img' ${i}
 			done
 	fi
 			 
@@ -2022,7 +2022,7 @@ install_ati(){
 			dialog --backtitle "$VERSION - $SYSTEM ($ARCHI)" --title "$_VBoxInstTitle" --msgbox "$_VBoxInstBody" 0 0
             clear
  			
-            pacstrap ${MOUNTPOINT} virtualbox-guest-utils virtualbox-guest-dkms $VB_MOD 2>/tmp/.errlog
+            pacstrap ${MOUNTPOINT} virtualbox-guest-utils virtualbox-guest-modules-arch 2>/tmp/.errlog
 			umount -l /mnt/dev
  
             # Load modules and enable vboxservice.
